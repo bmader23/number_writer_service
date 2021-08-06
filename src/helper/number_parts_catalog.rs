@@ -78,13 +78,13 @@ pub fn get_decimal_magnitude_indicator(single_digit_iteration: u64) -> Option<St
     let return_str;
     match single_digit_iteration {
         1 => { return_str = "";                    }
-        10 => { return_str = "tenths";              }
-        100 => { return_str = "hundredths";           }
-        1000 => { return_str = "thousandths";          }
-        10000 => { return_str = "ten thousandths";      }
-        100000 => { return_str = "hundred thousandths";  }
-        1000000 => { return_str = "millionths"}
-        _three_digit_iteration_not_found => { return_str = "very high decimal place...ths"; }
+        10 => { return_str = "tenth";              }
+        100 => { return_str = "hundredth";           }
+        1000 => { return_str = "thousandth";          }
+        10000 => { return_str = "ten thousandth";      }
+        100000 => { return_str = "hundred thousandth";  }
+        1000000 => { return_str = "millionth"}
+        _three_digit_iteration_not_found => { return_str = "very high decimal place...th"; }
     }
     return Some(return_str.to_string());
 }

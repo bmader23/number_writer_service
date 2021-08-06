@@ -33,7 +33,7 @@ pub mod from{
         let test_val = PhoneticNumber::from(".1000".to_string());
         
         assert_eq!(test_val.get_numeric_string(), "0.1000");
-        assert_eq!(test_val.get_phonetic_string(), "zero and one thousand ten thousandths");
+        assert_eq!(test_val.get_phonetic_string(), "zero, and one thousand ten thousandths");
     }
 
     #[test]
@@ -72,9 +72,9 @@ pub mod from{
     pub fn zero_decimal(){
         let test_val = PhoneticNumber::from("0.000".to_string());
 
-        assert_eq!(test_val.get_numeric_string(), "0.000");
+        assert_eq!(test_val.get_numeric_string(), "0.0");
         
-        //This is a matter of taste... electing to read out the full decimal value rather than just "zero"
+        //This is a matter of taste... electing to read out the single decimal value rather than just "zero" if no value in decimal
         assert_eq!(test_val.get_phonetic_string(), "zero, and zero thousandths");
     }
 
@@ -105,7 +105,7 @@ pub mod from{
     }
 
     #[test]
-    pub fn cents(){
+    pub fn whole_cents(){
         let test_val = PhoneticNumber::from("$0.26".to_string());
 
         assert_eq!(test_val.get_numeric_string(), "$0.26");

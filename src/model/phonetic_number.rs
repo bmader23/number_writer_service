@@ -38,6 +38,7 @@ use crate::helper::{number_parts_catalog::{
     get_magnitude_indicator,
     get_decimal_magnitude_indicator
 }, string_modifications::concatenate_strings};
+use crate::model::phonetic_number;
 
 pub struct PhoneticNumber{
     pub raw_string_value: String,
@@ -65,7 +66,7 @@ impl<'a> PhoneticNumber{
             cleaning_log: "".to_string()
         }
     }
-    
+
     pub fn get_numeric_string(&self) -> &str{
         return &self.numeric_string;
     }
@@ -76,10 +77,19 @@ impl<'a> PhoneticNumber{
         return &self.cleaning_log;
     }
 
+    pub fn is_negative(&self) -> bool{
+        return (self.dollar_integer > 0 || self.cent_integer > 0) && self.negative;
+    }
+
     fn translate_u64_to_phonetic(translatee: u64) -> String{
         let mut return_val = "".to_string();
         let mut processed_translatee = translatee;
         let mut i = 0;
+        
+        match find_unique_naming_exception(processed_translatee){
+            Some(x) => { return x; }
+            None => {}
+        }
 
         loop {
         
@@ -120,11 +130,6 @@ impl<'a> PhoneticNumber{
         let mut tens_place = "".to_string();
         let mut hundreds_place  = "".to_string();
         let mut processed_value = translatee;
-
-        match find_unique_naming_exception(processed_value){
-            Some(x) => { return Some(x); }
-            None => {}
-        }
 
         match find_exception_to_double_digit_pattern(processed_value % 100){
             Some(x) => {
@@ -173,37 +178,62 @@ impl<'a> PhoneticNumber{
 
     fn generate_phonetic_string_from_object(& mut self) {
         let mut return_val = "".to_string();
-        if self.negative{
+        if self.is_negative(){
             return_val.push_str("negative ");
         }
         return_val.push_str(&format!("{}",PhoneticNumber::translate_u64_to_phonetic(self.dollar_integer)));
         if self.dollar_sign_included{
-            return_val.push_str(" dollars");
+            match self.dollar_integer{
+                1 => {
+                    return_val.push_str(" dollar");
+                }
+                _not_singular => {
+                    return_val.push_str(" dollars");       
+                }
+            }
+            
             if self.decimal_magnitude > 0{
                 let cents = self.cent_integer * 100 / self.decimal_magnitude;
-                return_val.push_str(&format!(", and {} cents", &PhoneticNumber::translate_u64_to_phonetic(cents)));
+                return_val.push_str(&format!(", and {}", &PhoneticNumber::translate_u64_to_phonetic(cents)));
+                match self.cent_integer{
+                    1 => {
+                        return_val.push_str(" cent");
+                    }
+                    _not_singular => {
+                        return_val.push_str(" cents");
+                    }
+                }
             }
         }else{
             if self.decimal_magnitude > 0{
                 let mut decimal_magnitude_indicator = "".to_string();
-                println!("Decimal Place Indicator: {}", self.decimal_magnitude);
+
                 match get_decimal_magnitude_indicator(self.decimal_magnitude){
                     Some(x) => { 
                         decimal_magnitude_indicator.push_str(&x);
                      }
                     None => {}
                 }
+
                 return_val.push_str(&format!(", and {} {}", 
                     &PhoneticNumber::translate_u64_to_phonetic(self.cent_integer), 
                     decimal_magnitude_indicator)
                 );
+                match self.cent_integer{
+                    1 => {
+                        //Do nothing
+                    }
+                    _not_singular => {
+                        return_val.push_str("s");
+                    }
+                }
             }
         }
         self.phonetic_string = return_val;
     }
     fn generate_numeric_string_from_object(& mut self) {
         let mut numeric_string = "".to_string();
-        if self.negative{
+        if self.is_negative(){ 
             numeric_string.push_str(&'-'.to_string());
         }
         if self.dollar_sign_included{
@@ -214,12 +244,12 @@ impl<'a> PhoneticNumber{
         if self.decimal_magnitude > 0{
             let mut leading_zeros = "".to_string();
             
-            let mut magnitude_disparity = self.decimal_magnitude;
+            let mut magnitude_disparity = 0;
             if self.cent_integer > 0{
-                magnitude_disparity = self.decimal_magnitude / self.cent_integer;
+                magnitude_disparity = (self.decimal_magnitude * 10) / self.cent_integer;
             }
 
-            while magnitude_disparity > 10{
+            while magnitude_disparity > 100{
                 leading_zeros.push_str("0");
                 magnitude_disparity /= 10;
             }
