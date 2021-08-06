@@ -5,6 +5,7 @@ use rocket::http::ContentType;
 use rocket::response::{self, Response, Responder};
 use rocket::request::Request;
 
+// TODO
 // use serde::ser::SerializeStruct;
 // use serde::{Serialize, Serializer};
 
@@ -79,6 +80,109 @@ impl<'a> PhoneticNumber{
 
     pub fn is_negative(&self) -> bool{
         return (self.dollar_integer > 0 || self.cent_integer > 0) && self.negative;
+    }
+
+    fn generate_phonetic_string_from_object(& mut self) {
+        let mut return_val = "".to_string();
+        if self.is_negative(){
+            return_val.push_str("negative ");
+        }
+        return_val.push_str(&format!("{}",PhoneticNumber::translate_u64_to_phonetic(self.dollar_integer)));
+        if self.dollar_sign_included{
+            return_val.push_str(&format!(" dollar{}", &PhoneticNumber::generate_plural_suffix(self.dollar_integer)));
+            
+            if self.decimal_magnitude > 0{
+                let cents = self.cent_integer * 100 / self.decimal_magnitude;
+                return_val.push_str(&format!(", and {} cent{}", 
+                    &PhoneticNumber::translate_u64_to_phonetic(cents),
+                    &PhoneticNumber::generate_plural_suffix(self.cent_integer)
+                ));
+            }
+        }else{
+            if self.decimal_magnitude > 0{
+                let mut decimal_magnitude_indicator = "".to_string();
+
+                match get_decimal_magnitude_indicator(self.decimal_magnitude){
+                    Some(x) => { 
+                        decimal_magnitude_indicator.push_str(&x);
+                     }
+                    None => {}
+                }
+
+                return_val.push_str(&format!(", and {} {}{}", 
+                    &PhoneticNumber::translate_u64_to_phonetic(self.cent_integer), 
+                    decimal_magnitude_indicator,
+                    PhoneticNumber::generate_plural_suffix(self.cent_integer)
+                ));
+            }
+        }
+        self.phonetic_string = return_val;
+    }
+    fn generate_numeric_string_from_object(& mut self) {
+        let mut numeric_string = "".to_string();
+        if self.is_negative(){ 
+            numeric_string.push_str(&'-'.to_string());
+        }
+        if self.dollar_sign_included{
+            numeric_string.push_str(&'$'.to_string());
+        }
+        numeric_string.push_str(&self.dollar_integer.to_string());
+
+        if self.decimal_magnitude > 0{
+            let mut leading_zeros = "".to_string();
+            
+            let mut magnitude_disparity = 0;
+            if self.cent_integer > 0{
+                magnitude_disparity = (self.decimal_magnitude * 10) / self.cent_integer;
+            }
+
+            while magnitude_disparity > 100{
+                leading_zeros.push_str("0");
+                magnitude_disparity /= 10;
+            }
+            numeric_string.push_str(&format!(".{}{}", leading_zeros, self.cent_integer.to_string()));
+        }
+
+        self.numeric_string = numeric_string;
+    }
+
+    fn set_decimal_magnitude(& mut self, new_val: u64){
+        self.decimal_magnitude = new_val;
+    }
+    fn set_dollar_sign_included(& mut self, new_val: bool){
+        self.dollar_sign_included = new_val;
+    }
+    fn set_negative(& mut self, new_val: bool){
+        self.negative = new_val;
+    }
+
+    fn clear_dollar_integer(& mut self){
+        self.dollar_integer = 0;
+    }
+
+    fn increment_dollar_integer(& mut self, increment_value: u64){
+        self.dollar_integer += increment_value;
+    }
+    fn increment_cent_integer(& mut self, increment_value: u64){
+        self.cent_integer += increment_value;
+    }
+
+    fn add_cleaning_entry(& mut self, add_entry: &str){
+        if self.cleaning_log.len() > 0{
+            self.cleaning_log.push_str("||");
+        }
+        self.cleaning_log.push_str(add_entry);
+    }
+
+    fn generate_plural_suffix(check_plural: u64) -> String{
+        match check_plural{
+            1 => {
+                return "".to_string();
+            }
+            _not_singular => {
+                return "s".to_string();       
+            }
+        }
     }
 
     fn translate_u64_to_phonetic(translatee: u64) -> String{
@@ -176,116 +280,6 @@ impl<'a> PhoneticNumber{
         return Some(return_string);
     }
 
-    fn generate_phonetic_string_from_object(& mut self) {
-        let mut return_val = "".to_string();
-        if self.is_negative(){
-            return_val.push_str("negative ");
-        }
-        return_val.push_str(&format!("{}",PhoneticNumber::translate_u64_to_phonetic(self.dollar_integer)));
-        if self.dollar_sign_included{
-            match self.dollar_integer{
-                1 => {
-                    return_val.push_str(" dollar");
-                }
-                _not_singular => {
-                    return_val.push_str(" dollars");       
-                }
-            }
-            
-            if self.decimal_magnitude > 0{
-                let cents = self.cent_integer * 100 / self.decimal_magnitude;
-                return_val.push_str(&format!(", and {}", &PhoneticNumber::translate_u64_to_phonetic(cents)));
-                match self.cent_integer{
-                    1 => {
-                        return_val.push_str(" cent");
-                    }
-                    _not_singular => {
-                        return_val.push_str(" cents");
-                    }
-                }
-            }
-        }else{
-            if self.decimal_magnitude > 0{
-                let mut decimal_magnitude_indicator = "".to_string();
-
-                match get_decimal_magnitude_indicator(self.decimal_magnitude){
-                    Some(x) => { 
-                        decimal_magnitude_indicator.push_str(&x);
-                     }
-                    None => {}
-                }
-
-                return_val.push_str(&format!(", and {} {}", 
-                    &PhoneticNumber::translate_u64_to_phonetic(self.cent_integer), 
-                    decimal_magnitude_indicator)
-                );
-                match self.cent_integer{
-                    1 => {
-                        //Do nothing
-                    }
-                    _not_singular => {
-                        return_val.push_str("s");
-                    }
-                }
-            }
-        }
-        self.phonetic_string = return_val;
-    }
-    fn generate_numeric_string_from_object(& mut self) {
-        let mut numeric_string = "".to_string();
-        if self.is_negative(){ 
-            numeric_string.push_str(&'-'.to_string());
-        }
-        if self.dollar_sign_included{
-            numeric_string.push_str(&'$'.to_string());
-        }
-        numeric_string.push_str(&self.dollar_integer.to_string());
-
-        if self.decimal_magnitude > 0{
-            let mut leading_zeros = "".to_string();
-            
-            let mut magnitude_disparity = 0;
-            if self.cent_integer > 0{
-                magnitude_disparity = (self.decimal_magnitude * 10) / self.cent_integer;
-            }
-
-            while magnitude_disparity > 100{
-                leading_zeros.push_str("0");
-                magnitude_disparity /= 10;
-            }
-            numeric_string.push_str(&format!(".{}{}", leading_zeros, self.cent_integer.to_string()));
-        }
-
-        self.numeric_string = numeric_string;
-    }
-
-    fn set_decimal_magnitude(& mut self, new_val: u64){
-        self.decimal_magnitude = new_val;
-    }
-    fn set_dollar_sign_included(& mut self, new_val: bool){
-        self.dollar_sign_included = new_val;
-    }
-    fn set_negative(& mut self, new_val: bool){
-        self.negative = new_val;
-    }
-
-    fn clear_dollar_integer(& mut self){
-        self.dollar_integer = 0;
-    }
-
-    fn increment_dollar_integer(& mut self, increment_value: u64){
-        self.dollar_integer += increment_value;
-    }
-    fn increment_cent_integer(& mut self, increment_value: u64){
-        self.cent_integer += increment_value;
-    }
-
-    fn add_cleaning_entry(& mut self, add_entry: &str){
-        if self.cleaning_log.len() > 0{
-            self.cleaning_log.push_str("||");
-        }
-        self.cleaning_log.push_str(add_entry);
-    }
 }
 
 impl<'r> Responder<'r, 'static> for PhoneticNumber {
@@ -297,6 +291,8 @@ impl<'r> Responder<'r, 'static> for PhoneticNumber {
         .ok()
     }
 }
+
+// TODO
 // impl Serialize for PhoneticNumber{
 //     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 //     where
@@ -310,6 +306,7 @@ impl<'r> Responder<'r, 'static> for PhoneticNumber {
 //         s.end()
 //     }
 // }
+
 impl ToString for PhoneticNumber{
     fn to_string(&self) -> String {
         return format!("{{\"{}\":\"{}\",\"{}\":\"{}\",\"{}\":\"{}\",\"{}\":\"{}\"}}",
