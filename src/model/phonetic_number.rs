@@ -1,4 +1,3 @@
-use core::num;
 use std::io::Cursor;
 
 use rocket::http::ContentType;
@@ -39,11 +38,10 @@ use crate::helper::{number_parts_catalog::{
     get_magnitude_indicator,
     get_decimal_magnitude_indicator
 }, string_modifications::concatenate_strings};
-use crate::model::phonetic_number;
 
 pub struct PhoneticNumber{
     pub raw_string_value: String,
-    phonetic_string:String,
+    long_form_number:String,
     numeric_string:String,
     dollar_integer: u64,
     cent_integer: u64,
@@ -57,7 +55,7 @@ impl<'a> PhoneticNumber{
     fn new(raw_string: String)->PhoneticNumber{
         return PhoneticNumber{
             raw_string_value: raw_string,
-            phonetic_string: "".to_string(),
+            long_form_number: "".to_string(),
             numeric_string: "".to_string(),
             dollar_integer: 0,
             cent_integer: 0,
@@ -72,7 +70,7 @@ impl<'a> PhoneticNumber{
         return &self.numeric_string;
     }
     pub fn get_phonetic_string(&self) -> &str{
-        return &self.phonetic_string;
+        return &self.long_form_number;
     }
     pub fn get_cleaning_log(&self) -> &str{
         return &self.cleaning_log;
@@ -116,7 +114,7 @@ impl<'a> PhoneticNumber{
                 ));
             }
         }
-        self.phonetic_string = return_val;
+        self.long_form_number = return_val;
     }
     fn generate_numeric_string_from_object(& mut self) {
         let mut numeric_string = "".to_string();
@@ -312,7 +310,7 @@ impl ToString for PhoneticNumber{
         return format!("{{\"{}\":\"{}\",\"{}\":\"{}\",\"{}\":\"{}\",\"{}\":\"{}\"}}",
             "raw_string", &self.raw_string_value,
             "numeric_string", &self.numeric_string,
-            "phonetic_string", &self.phonetic_string,
+            "long_form_number", &self.long_form_number,
             "cleaning_log", &self.cleaning_log
         )
     }

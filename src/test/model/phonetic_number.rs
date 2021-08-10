@@ -1,7 +1,5 @@
 pub mod from{
-        
     use crate::model::phonetic_number::PhoneticNumber;
-
 
     #[test]
     pub fn triplicate_zeros_silenced_if_other_values_present(){
